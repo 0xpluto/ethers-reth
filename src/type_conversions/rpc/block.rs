@@ -29,9 +29,9 @@ impl ToReth<Rich<Block>> for EthersBlock<EthersH256> {
                 nonce: self.nonce.into_reth(),
                 base_fee_per_gas: self.base_fee_per_gas.into_reth(),
                 withdrawals_root: self.withdrawals_root.into_reth(),
-                blob_gas_used: None,            // @todo
-                excess_blob_gas: None,          // @todo
-                parent_beacon_block_root: None, // @todo
+                blob_gas_used: self.blob_gas_used.into_reth(),
+                excess_blob_gas: self.excess_blob_gas.into_reth(),
+                parent_beacon_block_root: self.parent_beacon_block_root.into_reth(),
             },
             total_difficulty: self.total_difficulty.into_reth(),
             uncles: self.uncles.into_reth(),
@@ -67,9 +67,9 @@ impl ToReth<Rich<Block>> for EthersBlock<EthersTransaction> {
                 nonce: self.nonce.into_reth(),
                 base_fee_per_gas: self.base_fee_per_gas.into_reth(),
                 withdrawals_root: self.withdrawals_root.into_reth(),
-                blob_gas_used: None,            // @todo
-                excess_blob_gas: None,          // @todo
-                parent_beacon_block_root: None, // @todo
+                blob_gas_used: self.blob_gas_used.into_reth(),
+                excess_blob_gas: self.excess_blob_gas.into_reth(),
+                parent_beacon_block_root: self.parent_beacon_block_root.into_reth(),
             },
             total_difficulty: self.total_difficulty.into_reth(),
             uncles: self.uncles.into_reth(),
@@ -114,6 +114,9 @@ impl ToEthers<EthersBlock<EthersH256>> for Rich<Block> {
             nonce: self.header.nonce.into_ethers(),
             base_fee_per_gas: self.header.base_fee_per_gas.into_ethers(),
             withdrawals_root: self.header.withdrawals_root.into_ethers(),
+            blob_gas_used: self.header.blob_gas_used.into_ethers(),
+            excess_blob_gas: self.header.excess_blob_gas.into_ethers(),
+            parent_beacon_block_root: self.header.parent_beacon_block_root.into_ethers(),
             withdrawals: self.inner.withdrawals.into_ethers(),
             other: OtherFields::default(),
         }
@@ -151,6 +154,9 @@ impl ToEthers<EthersBlock<EthersTransaction>> for Rich<Block> {
             nonce: self.header.nonce.into_ethers(),
             base_fee_per_gas: self.header.base_fee_per_gas.into_ethers(),
             withdrawals_root: self.header.withdrawals_root.into_ethers(),
+            blob_gas_used: self.header.blob_gas_used.into_ethers(),
+            excess_blob_gas: self.header.excess_blob_gas.into_ethers(),
+            parent_beacon_block_root: self.header.parent_beacon_block_root.into_ethers(),
             withdrawals: self.inner.withdrawals.into_ethers(),
             other: OtherFields::default(),
         }

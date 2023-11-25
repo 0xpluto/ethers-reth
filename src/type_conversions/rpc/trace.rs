@@ -122,6 +122,8 @@ impl ToEthers<EthersStructLog> for StructLog {
             stack: self.stack.into_ethers(),
             storage: self.storage.into_ethers(),
             refund_counter: self.refund_counter,
+            mem_size: self.memory_size,
+            return_data: self.return_data.map(|v| v.to_string()),
         }
     }
 }

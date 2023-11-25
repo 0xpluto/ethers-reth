@@ -29,7 +29,7 @@ reth-payload-builder = { git = "https://github.com/paradigmxyz/reth", package = 
 
 
 # ethers
-ethers = { version = "2.0.10", features = [
+ethers = { version = "2.0.11", features = [
   "ipc",
   "ws",
   "rustls",
