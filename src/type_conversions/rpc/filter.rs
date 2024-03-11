@@ -4,7 +4,7 @@ use ethers::types::{
     Filter as EthersFilter, FilterBlockOption as EthersFilterBlockOption,
     ValueOrArray as EthersValueOrArray, H256 as EthersH256,
 };
-use reth_primitives::H256;
+use reth_primitives::B256;
 use reth_rpc_types::{Filter, FilterBlockOption, ValueOrArray};
 
 /// BlockNumber (ethers) -> BlockNumberOrTag (reth)
@@ -79,7 +79,7 @@ impl ToReth<Filter> for EthersFilter {
 }
 
 // Helper for converting H256 (reth) to Option<EthersH256> (ethers)
-impl ToEthers<Option<EthersH256>> for H256 {
+impl ToEthers<Option<EthersH256>> for B256 {
     fn into_ethers(self) -> Option<EthersH256> {
         Some(self.into_ethers())
     }

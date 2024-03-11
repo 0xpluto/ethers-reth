@@ -3,28 +3,27 @@ use reth_beacon_consensus::BeaconConsensus;
 use reth_blockchain_tree::{
     externals::TreeExternals, BlockchainTree, BlockchainTreeConfig, ShareableBlockchainTree,
 };
+use reth_node_ethereum::EthEvmConfig;
+use reth_revm::EvmProcessorFactory;
 
 use crate::{noop::NoopNetwork, RethApi, RethDebug, RethFilter, RethMiddleware, RethTrace};
 use ethers::providers::Middleware;
 // Reth
-use reth_db::{
-    database::{Database, DatabaseGAT},
-    mdbx::{Env, WriteMap},
-    tables,
-    transaction::DbTx,
-    DatabaseError,
+use reth_db::{database::Database, mdbx::DatabaseArguments, tables, transaction::DbTx, DatabaseEnv, DatabaseError};
+use reth_primitives::{
+    constants::ETHEREUM_BLOCK_GAS_LIMIT, ChainSpec, DEV, GOERLI, MAINNET, SEPOLIA,
 };
-use reth_primitives::{constants::ETHEREUM_BLOCK_GAS_LIMIT, DEV, GOERLI, MAINNET, SEPOLIA};
-use reth_provider::{providers::BlockchainProvider, ProviderFactory};
-use reth_revm::Factory;
+use reth_provider::{providers::BlockchainProvider,  ProviderFactory};
 use reth_rpc::{
     eth::{
-        cache::{EthStateCache, EthStateCacheConfig},
-        gas_oracle::{GasPriceOracle, GasPriceOracleConfig},
+        cache::{EthStateCache, EthStateCacheConfig}, gas_oracle::{GasPriceOracle, GasPriceOracleConfig}, EthFilterConfig, FeeHistoryCache, FeeHistoryCacheConfig
     },
-    DebugApi, EthApi, EthFilter, TraceApi, TracingCallGuard, TracingCallPool,
+    DebugApi, EthApi, EthFilter, TraceApi,
 };
-use reth_tasks::TaskManager;
+use reth_tasks::{
+    pool::{BlockingTaskGuard, BlockingTaskPool},
+    TaskManager,
+};
 use reth_transaction_pool::{
     blobstore::InMemoryBlobStore, CoinbaseTipOrdering, EthPooledTransaction,
     EthTransactionValidator, Pool, TransactionValidationTaskExecutor,
@@ -34,8 +33,8 @@ use std::{fmt::Debug, path::Path, sync::Arc};
 use tokio::runtime::Handle;
 
 pub type Provider = BlockchainProvider<
-    Arc<Env<WriteMap>>,
-    ShareableBlockchainTree<Arc<Env<WriteMap>>, Arc<BeaconConsensus>, Factory>,
+    Arc<DatabaseEnv>,
+    ShareableBlockchainTree<Arc<DatabaseEnv>, EvmProcessorFactory<ChainSpec>>,
 >;
 
 pub type RethTxPool = Pool<
@@ -67,31 +66,34 @@ where
             1337 => DEV.clone(),
             _ => panic!("Unsupported chain id"),
         };
+        let evm_config = EthEvmConfig::default();
+        let provider_factory = ProviderFactory::new(db.clone(), chain_spec.clone(), db_path.join("static_files")).unwrap();
 
         let tree_externals = TreeExternals::new(
-            db.clone(),
+            provider_factory.clone(),
             Arc::new(BeaconConsensus::new(chain_spec.clone())),
-            Factory::new(chain_spec.clone()),
-            chain_spec.clone(),
+            EvmProcessorFactory::new(chain_spec.clone(), EthEvmConfig::default()),
         );
 
         let tree_config = BlockchainTreeConfig::default();
 
-        let (canon_state_notification_sender, _receiver) =
-            tokio::sync::broadcast::channel(tree_config.max_reorg_depth() as usize * 2);
+        // let (canon_state_notification_sender, _receiver) =
+        //     tokio::sync::broadcast::channel(tree_config.max_reorg_depth() as usize * 2);
 
-        let blockchain_tree = ShareableBlockchainTree::new(
-            BlockchainTree::new(tree_externals, canon_state_notification_sender, tree_config, None)
-                .unwrap(),
-        );
+        let tree = BlockchainTree::new(tree_externals, tree_config, None).unwrap();
+        let blockchain_tree = ShareableBlockchainTree::new(tree);
 
         let provider = BlockchainProvider::new(
-            ProviderFactory::new(Arc::clone(&db), Arc::clone(&chain_spec)),
+            provider_factory,
             blockchain_tree,
         )
         .unwrap();
 
-        let state_cache = EthStateCache::spawn(provider.clone(), EthStateCacheConfig::default());
+        let state_cache = EthStateCache::spawn(
+            provider.clone(),
+            EthStateCacheConfig::default(),
+            evm_config.clone(),
+        );
 
         let blob_store = InMemoryBlobStore::default();
         let tx_pool = reth_transaction_pool::Pool::eth_pool(
@@ -116,23 +118,21 @@ where
                 state_cache.clone(),
             ),
             ETHEREUM_BLOCK_GAS_LIMIT,
-            TracingCallPool::build().unwrap(),
+            BlockingTaskPool::build().unwrap(),
+            FeeHistoryCache::new(state_cache.clone(), FeeHistoryCacheConfig::default()),
+            evm_config.clone(),
         );
 
-        let tracing_call_guard = TracingCallGuard::new(10);
+        let tracing_call_guard = BlockingTaskGuard::new(10);
 
         let reth_trace =
             TraceApi::new(provider.clone(), reth_api.clone(), tracing_call_guard.clone());
 
-        let reth_debug = DebugApi::new(
-            provider.clone(),
-            reth_api.clone(),
-            Box::new(task_executor.clone()),
-            tracing_call_guard,
-        );
+        let reth_debug =
+            DebugApi::new(provider.clone(), reth_api.clone(), tracing_call_guard.clone());
 
         let reth_filter =
-            EthFilter::new(provider, tx_pool, state_cache, 1000, Box::new(task_executor));
+            EthFilter::new(provider, tx_pool, state_cache, EthFilterConfig::default(), Box::new(task_executor));
 
         Ok((reth_api, reth_filter, reth_trace, reth_debug))
     }
@@ -141,9 +141,9 @@ where
 /// re-implementation of 'view()'
 /// allows for a function to be passed in through a RO libmdbx transaction
 /// /reth/crates/storage/db/src/abstraction/database.rs
-pub fn view<F, T>(db: &Env<WriteMap>, f: F) -> Result<T, DatabaseError>
+pub fn view<F, T>(db: &DatabaseEnv, f: F) -> Result<T, DatabaseError>
 where
-    F: FnOnce(&<Env<WriteMap> as DatabaseGAT<'_>>::TX) -> T,
+    F: FnOnce(&<DatabaseEnv as Database>::TX) -> T,
 {
     let tx = db.tx()?;
     let res = f(&tx);
@@ -153,13 +153,10 @@ where
 }
 
 /// Opens up an existing database at the specified path.
-pub fn init_db<P: AsRef<Path> + Debug>(path: P) -> eyre::Result<Env<WriteMap>> {
+pub fn init_db<P: AsRef<Path> + Debug>(path: P) -> eyre::Result<DatabaseEnv> {
     let _ = std::fs::create_dir_all(path.as_ref());
-    let db = reth_db::mdbx::Env::<reth_db::mdbx::WriteMap>::open(
-        path.as_ref(),
-        reth_db::mdbx::EnvKind::RO,
-        None,
-    )?;
+
+    let db = DatabaseEnv::open(path.as_ref(), reth_db::DatabaseEnvKind::RW, DatabaseArguments::default())?;
 
     view(&db, |tx| {
         for table in tables::Tables::ALL.iter().map(|table| table.name()) {

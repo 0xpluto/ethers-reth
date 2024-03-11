@@ -9,7 +9,6 @@ pub mod access_list;
 pub mod block;
 pub mod primitives;
 pub mod rpc;
-pub mod withdraw;
 
 // -----------------------------------------------
 /// conversion traits

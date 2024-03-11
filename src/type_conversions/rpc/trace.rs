@@ -20,7 +20,7 @@ use ethers::types::{
     StructLog as EthersStructLog, Suicide as EthersSuicide, Trace as EthersTrace,
     TraceType as EthersTraceType, TransactionTrace as EthersTransactionTrace,
     VMExecutedOperation as EthersVMExecutedOperation, VMOperation as EthersVMOperation,
-    VMTrace as EthersVMTrace,
+    VMTrace as EthersVMTrace, U256,
 };
 use reth_revm::primitives::bitvec::macros::internal::funty::Fundamental;
 use reth_rpc_types::trace::parity::{
@@ -192,8 +192,8 @@ impl ToEthers<EthersPreStateFrame> for PreStateFrame {
                             EthersAccountState {
                                 balance: v.balance.into_ethers(),
                                 code: v.code.map(|x| x.to_string()),
-                                nonce: v.nonce.into_ethers(),
-                                storage: v.storage.into_ethers(),
+                                nonce: v.nonce.map(|n| U256::from(n)),
+                                storage: Some(v.storage.into_ethers()),
                             },
                         )
                     })
@@ -209,8 +209,8 @@ impl ToEthers<EthersPreStateFrame> for PreStateFrame {
                             EthersAccountState {
                                 balance: v.balance.into_ethers(),
                                 code: v.code.map(|x| x.to_string()),
-                                nonce: v.nonce.into_ethers(),
-                                storage: v.storage.into_ethers(),
+                                nonce: v.nonce.map(|n| U256::from(n)),
+                                storage: Some(v.storage.into_ethers()),
                             },
                         )
                     })
@@ -224,8 +224,8 @@ impl ToEthers<EthersPreStateFrame> for PreStateFrame {
                             EthersAccountState {
                                 balance: v.balance.into_ethers(),
                                 code: v.code.map(|x| x.to_string()),
-                                nonce: v.nonce.into_ethers(),
-                                storage: v.storage.into_ethers(),
+                                nonce: v.nonce.map(|n| U256::from(n)),
+                                storage: Some(v.storage.into_ethers()),
                             },
                         )
                     })
@@ -268,6 +268,7 @@ impl ToEthers<EthersGethTrace> for GethTrace {
             GethTrace::NoopTracer(frame) => {
                 EthersGethTrace::Known(EthersGethTraceFrame::NoopTracer(frame.into_ethers()))
             }
+            GethTrace::MuxTracer(_) => todo!(),
             GethTrace::JS(value) => EthersGethTrace::Unknown(value),
         }
     }
@@ -516,7 +517,7 @@ impl ToEthers<EthersTraceType> for TraceType {
 impl ToReth<TraceResults> for EthersBlockTrace {
     fn into_reth(self) -> TraceResults {
         TraceResults {
-            output: self.output.into_reth(),
+            output: self.output.unwrap_or_default().into_reth(),
             // Ethers represents missing traces as Options, Reth uses empty vectors
             trace: self.trace.unwrap_or_default().into_reth(),
             vm_trace: self.vm_trace.into_reth(),
@@ -529,7 +530,10 @@ impl ToReth<TraceResults> for EthersBlockTrace {
 impl ToEthers<EthersBlockTrace> for TraceResults {
     fn into_ethers(self) -> EthersBlockTrace {
         EthersBlockTrace {
-            output: self.output.into_ethers(),
+            output: match self.output.len() {
+                0 => None,
+                _ => Some(self.output.into_ethers()),
+            },
             trace: match self.trace.len() {
                 0 => None,
                 _ => Some(self.trace.into_ethers()),
@@ -557,7 +561,10 @@ impl ToReth<TraceResultsWithTransactionHash> for EthersBlockTrace {
 impl ToEthers<EthersBlockTrace> for TraceResultsWithTransactionHash {
     fn into_ethers(self) -> EthersBlockTrace {
         EthersBlockTrace {
-            output: self.full_trace.output.into_ethers(),
+            output: match self.full_trace.output.len() {
+                0 => None,
+                _ => Some(self.full_trace.output.into_ethers()),
+            },
             trace: match self.full_trace.trace.len() {
                 0 => None,
                 _ => Some(self.full_trace.trace.into_ethers()),

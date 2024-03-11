@@ -11,6 +11,8 @@ impl ToReth<FeeHistory> for EthersFeeHistory {
             gas_used_ratio: self.gas_used_ratio,
             oldest_block: self.oldest_block.into_reth(),
             reward: Some(self.reward.into_reth()),
+            base_fee_per_blob_gas: vec![],
+            blob_gas_used_ratio: vec![],
         }
     }
 }

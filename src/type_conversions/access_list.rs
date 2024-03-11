@@ -4,7 +4,7 @@ use ethers::types::transaction::eip2930::{
     AccessList as EthersAccessList, AccessListItem as EthersAccessListItem,
     AccessListWithGasUsed as EthersAccessListWithGasUsed,
 };
-use reth_primitives::{AccessList, AccessListItem, AccessListWithGasUsed};
+use reth_rpc_types::{AccessList, AccessListItem, AccessListWithGasUsed};
 
 /// AccessListItem (ethers) -> (reth)
 impl ToReth<AccessListItem> for EthersAccessListItem {
@@ -49,7 +49,7 @@ impl ToEthers<EthersAccessList> for AccessList {
 impl ToReth<AccessListWithGasUsed> for EthersAccessListWithGasUsed {
     fn into_reth(self) -> AccessListWithGasUsed {
         AccessListWithGasUsed {
-            access_list: self.access_list.into_reth(),
+            access_list: self.access_list.into_reth().into(),
             gas_used: self.gas_used.into_reth(),
         }
     }

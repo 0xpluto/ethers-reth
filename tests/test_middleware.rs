@@ -33,6 +33,7 @@ mod tests {
         },
     };
 
+    use ethers_reth::type_conversions::ToReth;
     use reth_primitives::{DEV, MAINNET, U64};
 
     use serial_test::serial;
@@ -261,9 +262,9 @@ mod tests {
 
         let block_number = reth_middleware.get_block_number().await.unwrap();
 
-        let expected_block_number: U64 = 5.into();
+        let expected_block_number: U64 = U64::from(5);
 
-        assert_eq!(expected_block_number, block_number);
+        assert_eq!(expected_block_number, block_number.into_reth());
     }
 
     // eth_getBlockReceipts is being deprecated on mainnet and is not available on goerli on

@@ -1,17 +1,18 @@
 // std
 use eyre::Result;
 use noop::NoopNetwork;
+use reth_db::DatabaseEnv;
+use reth_interfaces::RethError;
+use reth_node_ethereum::EthEvmConfig;
 use std::{fmt::Debug, path::Path, sync::Arc};
 
 // ethers
 use ethers::providers::{Middleware, MiddlewareError};
 
 //Reth
-use reth_beacon_consensus::BeaconConsensus;
 use reth_blockchain_tree::ShareableBlockchainTree;
-use reth_db::mdbx::{Env, WriteMap};
-use reth_provider::providers::BlockchainProvider;
-use reth_revm::Factory;
+use reth_provider::{providers::BlockchainProvider, ProviderError};
+use reth_revm::EvmProcessorFactory;
 use reth_rpc::{eth::error::EthApiError, DebugApi, EthApi, EthFilter, TraceApi};
 use reth_transaction_pool::{
     blobstore::InMemoryBlobStore, CoinbaseTipOrdering, EthPooledTransaction,
@@ -28,8 +29,8 @@ pub mod type_conversions;
 use tokio::runtime::Handle;
 
 pub type RethClient = BlockchainProvider<
-    Arc<Env<WriteMap>>,
-    ShareableBlockchainTree<Arc<Env<WriteMap>>, Arc<BeaconConsensus>, Factory>,
+    Arc<DatabaseEnv>,
+    ShareableBlockchainTree<Arc<DatabaseEnv>, EvmProcessorFactory<EthEvmConfig>>,
 >;
 
 pub type RethTxPool = Pool<
@@ -38,7 +39,7 @@ pub type RethTxPool = Pool<
     InMemoryBlobStore,
 >;
 
-pub type RethApi = EthApi<RethClient, RethTxPool, NoopNetwork>;
+pub type RethApi = EthApi<RethClient, RethTxPool, NoopNetwork, EthEvmConfig>;
 pub type RethFilter = EthFilter<RethClient, RethTxPool>;
 pub type RethTrace = TraceApi<RethClient, RethApi>;
 pub type RethDebug = DebugApi<RethClient, RethApi>;
@@ -72,12 +73,21 @@ pub enum RethMiddlewareError<M: Middleware> {
     #[error(transparent)]
     EthApiError(#[from] EthApiError),
 
+    #[error(transparent)]
+    RethError(#[from] reth_interfaces::RethError),
+
     /// A trace was expected but none was found.
     #[error("Missing trace")]
     MissingTrace,
 
     #[error("Chain Id unavailable")]
     ChainIdUnavailable,
+}
+
+impl<M: Middleware> From<ProviderError> for RethMiddlewareError<M> {
+    fn from(e: ProviderError) -> Self {
+        RethMiddlewareError::RethError(RethError::Provider(e))
+    }
 }
 
 impl<M: Middleware> MiddlewareError for RethMiddlewareError<M> {

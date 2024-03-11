@@ -3,15 +3,16 @@ use crate::type_conversions::{ToEthers, ToReth};
 use ethers::types::{
     EIP1186ProofResponse as EthersEIP1186ProofResponse, StorageProof as EthersStorageProof,
 };
-use reth_primitives::serde_helper::JsonStorageKey;
+use reth_primitives::{serde_helper::JsonStorageKey, trie::StorageProof};
 
-use reth_rpc_types::{EIP1186AccountProofResponse, StorageProof};
+use reth_rpc_types::{EIP1186AccountProofResponse, EIP1186StorageProof};
 
 /// TransactionReceipt (ethers) -> (reth)
 impl ToReth<StorageProof> for EthersStorageProof {
     fn into_reth(self) -> StorageProof {
         StorageProof {
-            key: JsonStorageKey(self.key.into_reth()),
+            key: self.key.into_reth(),
+            nibbles: Default::default(),
             value: self.value.into_reth(),
             proof: self.proof.into_reth(),
         }
@@ -21,7 +22,7 @@ impl ToReth<StorageProof> for EthersStorageProof {
 impl ToEthers<EthersStorageProof> for StorageProof {
     fn into_ethers(self) -> EthersStorageProof {
         EthersStorageProof {
-            key: self.key.0.into_ethers(),
+            key: self.key.into_ethers(),
             value: self.value.into_ethers(),
             proof: self.proof.into_ethers(),
         }
@@ -29,6 +30,26 @@ impl ToEthers<EthersStorageProof> for StorageProof {
 }
 
 // -----------------------------------------------
+
+impl ToReth<EIP1186StorageProof> for EthersStorageProof {
+    fn into_reth(self) -> EIP1186StorageProof {
+        EIP1186StorageProof {
+            key: JsonStorageKey(self.key.into_reth()),
+            value: self.value.into_reth(),
+            proof: self.proof.into_reth(),
+        }
+    }
+}
+
+impl ToEthers<EthersStorageProof> for EIP1186StorageProof {
+    fn into_ethers(self) -> EthersStorageProof {
+        EthersStorageProof {
+            key: self.key.0.into_ethers(),
+            value: self.value.into_ethers(),
+            proof: self.proof.into_ethers(),
+        }
+    }
+}
 
 /// EIP1186AccountProofResponse (ethers) -> (reth)
 impl ToReth<EIP1186AccountProofResponse> for EthersEIP1186ProofResponse {

@@ -6,8 +6,7 @@ use ethers::types::{
     H64 as EthersH64, U256 as EthersU256, U64 as EthersU64,
 };
 use reth_primitives::{
-    serde_helper::{num::U64HexOrNumber, JsonStorageKey},
-    Bloom, Bytes, H160, H256, H64, U128, U256, U64, U8,
+    serde_helper::{num::U64HexOrNumber, JsonStorageKey}, Address, Bloom, Bytes, B256, B64, U128, U256, U64, U8
 };
 
 /// non-Uint numerical conversions
@@ -30,24 +29,6 @@ macro_rules! impl_ToEthers {
     }
 }
 
-/// non-Uint numerical conversions
-#[macro_export]
-macro_rules! impl_ToReth {
-    ($($t:ty, $u:ty),+) => {
-        $(impl ToReth<$t> for $u {
-            fn into_reth(self) -> $t {
-                const SIZE_IN: usize = mem::size_of::<$u>();
-                const SIZE_OUT: usize = mem::size_of::<$t>();
-                let mut buf = [0u8; 2048];
-
-                buf[(2048-SIZE_IN)..].copy_from_slice(&Into::<[u8; SIZE_IN]>::into(self));
-                let nw = TryInto::<[u8; SIZE_OUT]>::try_into(&buf[(2048-SIZE_OUT)..]).unwrap();
-                <$t>::from(nw)
-            }
-        })*
-    }
-}
-
 /// Uint<bits, limbs> numerical conversions
 #[macro_export]
 macro_rules! impl_ToEthers_Uint {
@@ -64,6 +45,24 @@ macro_rules! impl_ToEthers_Uint {
         }
         impl_ToReth_Uint!($u, $t);
     )*
+    }
+}
+
+/// non-Uint numerical conversions
+#[macro_export]
+macro_rules! impl_ToReth {
+    ($($t:ty, $u:ty),+) => {
+        $(impl ToReth<$t> for $u {
+            fn into_reth(self) -> $t {
+                const SIZE_IN: usize = mem::size_of::<$u>();
+                const SIZE_OUT: usize = mem::size_of::<$t>();
+                let mut buf = [0u8; 2048];
+
+                buf[(2048-SIZE_IN)..].copy_from_slice(&Into::<[u8; SIZE_IN]>::into(self));
+                let nw = TryInto::<[u8; SIZE_OUT]>::try_into(&buf[(2048-SIZE_OUT)..]).unwrap();
+                <$t>::from(nw)
+            }
+        })*
     }
 }
 
@@ -124,16 +123,79 @@ macro_rules! array_impls {
 array_impls!(4, 32);
 
 impl_ToEthers_Uint!(EthersU256, (U256, U128));
-impl_ToEthers!(EthersU256, (U64, H256));
+//impl_ToEthers!(EthersU256, (U64, B256));
 
 impl_ToEthers_Uint!(EthersU64, (U256));
-impl_ToEthers!(EthersU64, (U64));
+//impl_ToEthers!(EthersU64, (U64));
 
-impl_ToEthers!(EthersH256, (H256));
-impl_ToEthers!(EthersH160, (H160));
-impl_ToEthers!(EthersH64, (H64));
+impl ToEthers<EthersU64> for U64 {
+    fn into_ethers(self) -> EthersU64 {
+        let mut buf = [0u8; 8];
+        buf.copy_from_slice(&self.to_be_bytes::<8>());
+        EthersU64::from_big_endian(&buf)
+    }
+}
+
+impl ToReth<U64> for EthersU64 {
+    fn into_reth(self) -> U64 {
+        let mut buf = [0u8; 8];
+        self.to_big_endian(&mut buf);
+        U64::from_be_bytes(buf)
+    }
+}
+
+impl ToEthers<EthersU256> for U64 {
+    fn into_ethers(self) -> EthersU256 {
+        let mut buf = [0u8; 32];
+        buf[28..32].copy_from_slice(&self.to_be_bytes::<32>());
+        EthersU256::from_big_endian(&buf)
+    }
+}
+
+impl ToReth<U64> for EthersU256 {
+    fn into_reth(self) -> U64 {
+        let mut buf = [0u8; 32];
+        self.to_big_endian(&mut buf);
+        U64::from_be_bytes::<8>(buf[28..32].try_into().unwrap())
+    }
+}
+
+impl ToEthers<EthersU256> for B256 {
+    fn into_ethers(self) -> EthersU256 {
+        let mut buf = [0u8; 32];
+        buf.copy_from_slice(&self.to_vec());
+        EthersU256::from_big_endian(&buf)
+    }
+}
+
+impl ToReth<B256> for EthersU256 {
+    fn into_reth(self) -> B256 {
+        let mut buf = [0u8; 32];
+        self.to_big_endian(&mut buf);
+        buf.into()
+    }
+}
+
+// impl ToEthers<EthersH160> for Address {
+//     fn into_ethers(self) -> EthersH160 {
+//         let mut buf = [0u8; 20];
+//         buf.copy_from_slice(&self.to_vec());
+//         EthersH160::from(buf)
+//     }
+// }
+
+// impl ToReth<Address> for EthersH160 {
+//     fn into_reth(self) -> Address {
+//         self.0.into()
+//     }
+// }
+
+impl_ToEthers!(EthersH256, (B256));
+impl_ToEthers!(EthersH160, (Address));
+impl_ToEthers!(EthersH64, (B64));
 
 impl_ToEthers!(EthersBloom, (Bloom));
+
 
 /// U8 (reth) -> U64 (ethers)
 impl ToReth<U8> for EthersU64 {
@@ -148,7 +210,7 @@ impl ToReth<U8> for EthersU64 {
 }
 
 impl ToEthers<EthersU64> for U8 {
-    fn into_ethers(self) -> U64 {
+    fn into_ethers(self) -> EthersU64 {
         const SIZE_IN: usize = 1;
         const SIZE_OUT: usize = mem::size_of::<EthersU64>();
         let mut buf = [0u8; 64];
@@ -174,13 +236,13 @@ impl ToEthers<EthersBytes> for Bytes {
 /// JsonStorageKey (reth) -> H256 (ethers)
 impl ToReth<JsonStorageKey> for EthersH256 {
     fn into_reth(self) -> JsonStorageKey {
-        JsonStorageKey(self.into())
+        JsonStorageKey(self.into_reth())
     }
 }
 
 /// JsonStorageKey (ethers) -> H256 (reth)
-impl ToEthers<H256> for JsonStorageKey {
-    fn into_ethers(self) -> H256 {
+impl ToEthers<B256> for JsonStorageKey {
+    fn into_ethers(self) -> B256 {
         self.0
     }
 }
@@ -196,7 +258,8 @@ impl ToReth<U64HexOrNumber> for EthersU256 {
 /// JsonStorageKey (ethers) -> H256 (reth)
 impl ToEthers<EthersU256> for U64HexOrNumber {
     fn into_ethers(self) -> EthersU256 {
-        U64::from(self).into_ethers()
+        let u: U64 = self.into();
+        u.into_ethers()
     }
 }
 

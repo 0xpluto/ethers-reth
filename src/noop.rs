@@ -11,7 +11,7 @@ use reth_network_api::{
 };
 use reth_primitives::{Chain, NodeRecord, PeerId};
 use reth_rpc_types::{EthProtocolInfo, NetworkStatus};
-use std::net::{IpAddr, SocketAddr};
+use std::{future::Future, net::{IpAddr, SocketAddr}};
 
 /// A type that implements all network trait that does nothing.
 ///
@@ -27,7 +27,7 @@ impl NoopNetwork {
     }
 }
 
-#[async_trait]
+
 impl NetworkInfo for NoopNetwork {
     fn local_addr(&self) -> SocketAddr {
         (IpAddr::from(std::net::Ipv4Addr::UNSPECIFIED), 30303).into()
@@ -81,11 +81,23 @@ impl Peers for NoopNetwork {
 
     fn reputation_change(&self, _peer_id: PeerId, _kind: ReputationChangeKind) {}
 
-    async fn reputation_by_id(&self, _peer_id: PeerId) -> Result<Option<Reputation>, NetworkError> {
-        Ok(None)
+    fn reputation_by_id(&self, _peer_id: PeerId) -> impl Future<Output = Result<Option<Reputation>, NetworkError>> + Send {
+        async { Ok(None) }
     }
 
-    async fn get_peers(&self) -> Result<Vec<PeerInfo>, NetworkError> {
-        Ok(vec![])
+    fn get_all_peers(&self) -> impl Future<Output = Result<Vec<PeerInfo>, NetworkError>> + Send {
+        async { Ok(vec![]) }
+    }
+
+    fn get_peers_by_kind(&self, _kind: PeerKind) -> impl Future<Output = Result<Vec<PeerInfo>, NetworkError>> + Send {
+        async { Ok(vec![]) }
+    }
+
+    fn get_peers_by_id(&self, _peer_id: Vec<PeerId>) -> impl Future<Output = Result<Vec<PeerInfo>, NetworkError>> + Send {
+        async { Ok(vec![]) }
+    }
+
+    fn get_peer_by_id(&self, _peer_id: PeerId) -> impl Future<Output = Result<Option<PeerInfo>, NetworkError>> + Send {
+        async { Ok(None) }
     }
 }
