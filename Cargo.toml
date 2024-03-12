@@ -4,29 +4,31 @@ version = "0.1.0"
 edition = "2021"
 
 [patch.crates-io]
+#discv5 = { git = "https://github.com/armaganyildirak/discv5/", branch = "alloy-rlp" }
+#enr = { git = "https://github.com/sigp/enr", rev = "77bde01922fb0b79b0c12bdecc1511b324e8f06c" } 
 # patched for quantity U256 responses <https://github.com/recmo/uint/issues/224>
 #revm = { git = "https://github.com/bluealloy/revm/", branch = "release/v25" }
 #revm-primitives = { git = "https://github.com/bluealloy/revm/", branch = "release/v25" }
 
 [dependencies]
-reth-tasks = { git = "https://github.com/paradigmxyz/reth", package = "reth-tasks", rev = "66c9403" }
-reth-rpc = { git = "https://github.com/paradigmxyz/reth", package = "reth-rpc", rev = "66c9403" }
-reth-rpc-api = { git = "https://github.com/paradigmxyz/reth", package = "reth-rpc-api", rev = "66c9403" }
-reth-rpc-types = { git = "https://github.com/paradigmxyz/reth", package = "reth-rpc-types", rev = "66c9403" }
-reth-provider = { git = "https://github.com/paradigmxyz/reth", package = "reth-provider", rev = "66c9403" }
-reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth", package = "reth-transaction-pool", rev = "66c9403" }
-reth-network-api = { git = "https://github.com/paradigmxyz/reth", package = "reth-network-api", rev = "66c9403" }
-reth-primitives = { git = "https://github.com/paradigmxyz/reth", package = "reth-primitives", rev = "66c9403" }
-reth-db = { git = "https://github.com/paradigmxyz/reth", package = "reth-db", features = ["test-utils"], rev = "66c9403" }
-reth-blockchain-tree = { git = "https://github.com/paradigmxyz/reth", package = "reth-blockchain-tree", rev = "66c9403" }
-reth-beacon-consensus = { git = "https://github.com/paradigmxyz/reth", package = "reth-beacon-consensus", rev = "66c9403" }
-reth-revm = { git = "https://github.com/paradigmxyz/reth", package = "reth-revm", rev = "66c9403" }
-reth-interfaces = { git = "https://github.com/paradigmxyz/reth", package = "reth-interfaces", features = ["test-utils"], rev = "66c9403" }
-reth-stages = { git = "https://github.com/paradigmxyz/reth", package = "reth-stages", features = ["test-utils"], rev = "66c9403" }
-reth-trie = { git = "https://github.com/paradigmxyz/reth", package = "reth-trie", rev = "66c9403" }
-reth-eth-wire = { git = "https://github.com/paradigmxyz/reth", package = "reth-eth-wire", rev = "66c9403" }
-reth-payload-builder = { git = "https://github.com/paradigmxyz/reth", package = "reth-payload-builder", rev = "66c9403" }
-reth-node-ethereum = { git = "https://github.com/paradigmxyz/reth", package = "reth-node-ethereum", rev = "66c9403" }
+reth-tasks = { git = "https://github.com/paradigmxyz/reth", package = "reth-tasks" }
+reth-rpc = { git = "https://github.com/paradigmxyz/reth", package = "reth-rpc" }
+reth-rpc-api = { git = "https://github.com/paradigmxyz/reth", package = "reth-rpc-api" }
+reth-rpc-types = { git = "https://github.com/paradigmxyz/reth", package = "reth-rpc-types" }
+reth-provider = { git = "https://github.com/paradigmxyz/reth", package = "reth-provider" }
+reth-transaction-pool = { git = "https://github.com/paradigmxyz/reth", package = "reth-transaction-pool" }
+reth-network-api = { git = "https://github.com/paradigmxyz/reth", package = "reth-network-api" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth", package = "reth-primitives" }
+reth-db = { git = "https://github.com/paradigmxyz/reth", package = "reth-db", features = ["test-utils"] }
+reth-blockchain-tree = { git = "https://github.com/paradigmxyz/reth", package = "reth-blockchain-tree" }
+reth-beacon-consensus = { git = "https://github.com/paradigmxyz/reth", package = "reth-beacon-consensus" }
+reth-revm = { git = "https://github.com/paradigmxyz/reth", package = "reth-revm" }
+reth-interfaces = { git = "https://github.com/paradigmxyz/reth", package = "reth-interfaces", features = ["test-utils"] }
+reth-stages = { git = "https://github.com/paradigmxyz/reth", package = "reth-stages", features = ["test-utils"] }
+reth-trie = { git = "https://github.com/paradigmxyz/reth", package = "reth-trie" }
+reth-eth-wire = { git = "https://github.com/paradigmxyz/reth", package = "reth-eth-wire" }
+reth-payload-builder = { git = "https://github.com/paradigmxyz/reth", package = "reth-payload-builder" }
+reth-node-ethereum = { git = "https://github.com/paradigmxyz/reth", package = "reth-node-ethereum" }
 
 # ethers
 ethers = { version = "2.0.14", features = [
