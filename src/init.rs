@@ -58,7 +58,7 @@ where
 
         handle.spawn(task_manager);
 
-        let db = Arc::new(init_db(db_path).unwrap());
+        let db = Arc::new(init_db(db_path.join("db")).unwrap());
         let chain_spec = match chain_id {
             1 => MAINNET.clone(),
             5 => GOERLI.clone(),
